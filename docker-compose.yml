@@ -4,6 +4,7 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     environment:
+      SOTKI_ACCESS_CODE: ${SOTKI_ACCESS_CODE:?Set SOTKI_ACCESS_CODE in .env}
       TZ: Asia/Jakarta
       DATABASE_PATH: /app/data/badminton.sqlite
     volumes:

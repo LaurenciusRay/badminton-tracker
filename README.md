@@ -40,3 +40,7 @@ docker compose logs -f app
 ```
 
 Buka http://localhost:3000 atau port host yang diatur. Satu container menjalankan migration sebelum memulai aplikasi. File SQLite disimpan pada named volume `badminton_data` di `/app/data`. Untuk menghentikan aplikasi sambil mempertahankan data, jalankan `docker compose down`.
+
+## Login
+
+Isi `SOTKI_ACCESS_CODE` pada `.env` dengan kode enam digit sebelum menjalankan aplikasi. Untuk produksi, gunakan HTTPS agar browser dapat mengirim cookie Secure. Session berlaku 30 hari dan tersimpan di subdirektori `sessions/` pada volume data.
