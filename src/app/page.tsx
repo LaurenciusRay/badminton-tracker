@@ -1,3 +1,5 @@
+import PlayerPanel from "../players/PlayerPanel";
+import { loadPlayers } from "../players/actions";
 import AttendancePanel from "../attendance/AttendancePanel";
 import { loadAttendance } from "../attendance/actions";
 import Link from "next/link";
@@ -8,7 +10,8 @@ export default async function Home({ searchParams }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
   await requireSession();
-  const active = (await searchParams).tab === "reward" ? "Reward" : "Absen";
+  const { tab } = await searchParams;
+  const active = tab === "pemain" || tab === "reward" ? "Pemain" : "Absen";
 
   return (
     <main className="min-h-dvh bg-emerald-950 px-5 py-6 text-white">
@@ -20,8 +23,8 @@ export default async function Home({ searchParams }: {
           </form>
         </header>
         <nav aria-label="Menu utama" className="mt-8 flex gap-2 border-b border-emerald-800">
-          {(["Absen", "Reward"] as const).map(tab => (
-            <Link key={tab} href={tab === "Absen" ? "/" : "/?tab=reward"}
+          {(["Absen", "Pemain"] as const).map(tab => (
+            <Link key={tab} href={tab === "Absen" ? "/" : "/?tab=pemain"}
               aria-current={tab === active ? "page" : undefined}
               className="border-b-2 border-transparent px-5 py-3 text-emerald-200 aria-[current=page]:border-emerald-300 aria-[current=page]:text-white">
               {tab}
@@ -31,7 +34,7 @@ export default async function Home({ searchParams }: {
         <section className="py-8">
           <h2 className="mb-2 text-xl font-semibold">{active}</h2>
           {active === "Absen" ? <AttendancePanel {...await loadAttendance()} /> : (
-            <p className="text-emerald-100">Daftar potongan pemain akan tampil di sini.</p>
+            <PlayerPanel players={await loadPlayers()} />
           )}
         </section>
       </div>

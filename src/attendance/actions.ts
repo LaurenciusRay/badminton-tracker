@@ -22,11 +22,12 @@ export async function loadAttendance() {
   };
 }
 
-export async function saveAttendance(date: string, raw: string, names: string[]) {
+export async function saveAttendance(date: string, raw: string, names: string[], sessionId?: number) {
   await requireSession();
   if (typeof date !== "string" || !validDate(date) || date > jakartaToday())
     return { error: "Pilih tanggal bermain yang valid sampai hari ini." };
-  if (typeof raw !== "string" || !raw.trim()) return { error: "Chat asli masih kosong." };
+  if (sessionId !== undefined && (!Number.isSafeInteger(sessionId) || sessionId < 1)) return { error: "Sesi tidak valid." };
+  if (sessionId === undefined && (typeof raw !== "string" || !raw.trim())) return { error: "Chat asli masih kosong." };
   if (!Array.isArray(names) || names.length < 1 || names.length > 40)
     return { error: "Jumlah pemain harus 1–40." };
   if (names.some(n => typeof n !== "string" || !normalizeMemberName(n)))
@@ -34,18 +35,29 @@ export async function saveAttendance(date: string, raw: string, names: string[])
   const keys = names.map(normalizeMemberName);
   if (new Set(keys).size !== keys.length) return { error: "Ada nama pemain yang sama. Periksa daftar pemain." };
   try {
-    const saved = db.transaction(tx => {
-      const session = tx.insert(playSessions).values({ playDate: date, rawText: raw })
-        .onConflictDoNothing({ target: playSessions.playDate }).returning({ id: playSessions.id }).get();
-      if (!session) return false;
+    const error = db.transaction(tx => {
+      let id = sessionId;
+      if (id === undefined) {
+        const session = tx.insert(playSessions).values({ playDate: date, rawText: raw })
+          .onConflictDoNothing({ target: playSessions.playDate }).returning({ id: playSessions.id }).get();
+        if (!session) return "Sesi pada tanggal ini sudah tercatat.";
+        id = session.id;
+      } else {
+        const other = tx.select({ id: playSessions.id }).from(playSessions).where(eq(playSessions.playDate, date)).get();
+        if (other && other.id !== id) return "Sesi pada tanggal ini sudah tercatat.";
+        if (!tx.update(playSessions).set({ playDate: date }).where(eq(playSessions.id, id)).run().changes)
+          return "Sesi sudah dihapus.";
+        tx.delete(attendances).where(eq(attendances.sessionId, id)).run();
+      }
+      const targetId = id;
       tx.insert(members).values(names.map((name, i) => ({ name: name.trim(), normalizedName: keys[i] })))
         .onConflictDoNothing({ target: members.normalizedName }).run();
       const ids = new Map(tx.select().from(members).where(inArray(members.normalizedName, keys)).all()
         .map(m => [m.normalizedName, m.id]));
-      tx.insert(attendances).values(keys.map(key => ({ sessionId: session.id, memberId: ids.get(key)! }))).run();
-      return true;
+      tx.insert(attendances).values(keys.map(key => ({ sessionId: targetId, memberId: ids.get(key)! }))).run();
+      return "";
     }, { behavior: "immediate" });
-    if (!saved) return { error: "Sesi pada tanggal ini sudah tercatat." };
+    if (error) return { error };
   } catch {
     return { error: "Sesi gagal disimpan. Coba lagi." };
   }
