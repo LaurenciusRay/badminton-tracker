@@ -1,9 +1,8 @@
 import { sql } from "drizzle-orm";
 import { check, customType, index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
-export function normalizeMemberName(name: string) {
-  return name.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase().normalize("NFKC");
-}
+import { normalizeMemberName } from "../attendance/name";
+export { normalizeMemberName };
 
 // Apply the same normalization to Drizzle writes and bound query values.
 const normalizedText = customType<{ data: string; driverData: string }>({

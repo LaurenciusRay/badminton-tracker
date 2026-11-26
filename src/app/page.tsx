@@ -1,3 +1,5 @@
+import AttendancePanel from "../attendance/AttendancePanel";
+import { loadAttendance } from "../attendance/actions";
 import Link from "next/link";
 import { logout } from "../auth/actions";
 import { requireSession } from "../auth/session";
@@ -28,7 +30,9 @@ export default async function Home({ searchParams }: {
         </nav>
         <section className="py-8">
           <h2 className="mb-2 text-xl font-semibold">{active}</h2>
-          <p className="text-emerald-100">{active === "Absen" ? "Daftar kehadiran akan tampil di sini." : "Daftar potongan pemain akan tampil di sini."}</p>
+          {active === "Absen" ? <AttendancePanel {...await loadAttendance()} /> : (
+            <p className="text-emerald-100">Daftar potongan pemain akan tampil di sini.</p>
+          )}
         </section>
       </div>
     </main>
