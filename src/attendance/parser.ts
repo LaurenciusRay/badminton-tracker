@@ -33,7 +33,7 @@ export function parseChat(raw: string, today: string) {
       const name = row[2]
         .replace(/[#*0-9]\u20e3|[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}✓✔](?:[\ufe0e\ufe0f\u{e0020}-\u{e007f}]|\u200d(?=\p{Extended_Pictographic}))*/gu, " ")
         .replace(/\s+/gu, " ").trim();
-      names.push(name);
+      names.push(name.toLowerCase().replace(/\p{L}/u, letter => letter.toUpperCase()));
     } else if (names.length) {
       break;
     } else if (!date && !/^(?:💵|💳|biaya|pembayaran|rekening)/iu.test(line)) {
