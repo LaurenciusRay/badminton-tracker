@@ -55,15 +55,15 @@ export default function AttendancePanel({ today, memberKeys, history }: Props) {
           <p>{filled.length} pemain · {existing} member terdaftar · {filled.length - existing} NEW</p>
           <ol className="space-y-2">
             {draft.names.map((name, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <span>{i + 1}.</span>
+              <li key={i} className="grid grid-cols-[2rem_minmax(0,12rem)_3rem_2.75rem] items-center gap-2">
+                <span className="text-right tabular-nums">{i + 1}.</span>
                 <input className={field} aria-label={`Nama pemain ${i + 1}`} value={name} onChange={e => {
                   const names = draft.names.slice();
                   names[i] = e.target.value;
                   setDraft({ ...draft, names });
                 }} />
                 <span className="text-xs text-emerald-200">{!name.trim() ? "—" : known.has(normalizeMemberName(name)) ? "Member" : "NEW"}</span>
-                <button className="p-2" aria-label={`Hapus pemain ${i + 1}`}
+                <button className="grid size-11 place-items-center rounded-lg bg-red-400/15 text-2xl leading-none text-red-200 transition-colors hover:bg-red-400/25 focus-visible:outline-2 focus-visible:outline-red-300 active:bg-red-400/35" aria-label={`Hapus pemain ${i + 1}`}
                   onClick={() => setDraft({ ...draft, names: draft.names.filter((_, j) => j !== i) })}>×</button>
               </li>
             ))}
