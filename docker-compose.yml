@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      TZ: Asia/Jakarta
+      DATABASE_PATH: /app/data/badminton.sqlite
+    volumes:
+      - badminton_data:/app/data
+
+volumes:
+  badminton_data:
