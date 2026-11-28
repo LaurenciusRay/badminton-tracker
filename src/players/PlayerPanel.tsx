@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { normalizeMemberName } from "../attendance/name";
-import { renamePlayer, removePlayer, type loadPlayers } from "./actions";
+import { mergePlayers, renamePlayer, removePlayer, type loadPlayers } from "./actions";
 
 type Player = Awaited<ReturnType<typeof loadPlayers>>[number];
 const button = "min-h-11 rounded-lg border border-emerald-700 px-3 aria-pressed:bg-emerald-800 disabled:opacity-50";
@@ -13,6 +13,7 @@ export default function PlayerPanel({ players }: { players: Player[] }) {
   const [onlyReward, setOnlyReward] = useState(false);
   const [message, setMessage] = useState("");
   const [edit, setEdit] = useState<Player | null>(null);
+  const [duplicateTarget, setDuplicateTarget] = useState<{ id: number; name: string } | null>(null);
   const [error, setError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
   const [pending, start] = useTransition();
@@ -51,7 +52,7 @@ export default function PlayerPanel({ players }: { players: Player[] }) {
       </span>
       <div className="flex gap-2">
         <button className={iconButton} disabled={pending} aria-label={`Edit ${p.name}`} onClick={() => {
-          setEdit(p); setError(""); dialog.current?.showModal();
+          setEdit(p); setError(""); setDuplicateTarget(null); dialog.current?.showModal();
         }}><svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z" /></svg></button>
         <button className={iconButton + " text-red-300"} disabled={pending} aria-label={`Hapus ${p.name}`} onClick={() => {
@@ -69,18 +70,63 @@ export default function PlayerPanel({ players }: { players: Player[] }) {
         if (!edit || pending) return;
         start(async () => {
           try {
-            const problem = await renamePlayer(edit.id, edit.name);
-            if (problem) { setError(problem); return; }
-            dialog.current?.close(); setMessage("Nama pemain diperbarui.");
+            const res = await renamePlayer(edit.id, edit.name);
+            if (res.error) {
+              setError(res.error);
+              if (res.duplicateMember) setDuplicateTarget(res.duplicateMember);
+              return;
+            }
+            dialog.current?.close(); setEdit(null); setDuplicateTarget(null); setMessage("Nama pemain diperbarui.");
           } catch { setError("Gagal menyimpan nama."); }
         });
       }}>
         <label id="edit-title" htmlFor="edit-name">Edit nama pemain</label>
         <input id="edit-name" autoFocus required value={edit?.name ?? ""} disabled={pending}
-          onChange={e => edit && setEdit({ ...edit, name: e.target.value })} className="rounded-lg bg-white p-2 text-emerald-950" />
-        {error && <p role="alert">{error}</p>}
-        <div className="flex justify-end gap-2"><button type="button" className={button} disabled={pending} onClick={() => dialog.current?.close()}>Batal</button>
-          <button className={button} disabled={pending}>Simpan</button></div>
+          onChange={e => {
+            if (edit) {
+              setEdit({ ...edit, name: e.target.value });
+              setError("");
+              setDuplicateTarget(null);
+            }
+          }} className="rounded-lg bg-white p-2 text-emerald-950" />
+        {error && <p role="alert" className="text-amber-200 text-sm">{error}</p>}
+        {duplicateTarget && (
+          <div className="rounded-lg border border-emerald-600/60 bg-emerald-900/60 p-3 text-sm">
+            <p className="mb-2 text-emerald-100">
+              Gabungkan riwayat bermain <strong>{players.find(p => p.id === edit?.id)?.name ?? edit?.name}</strong> ke <strong>{duplicateTarget.name}</strong>?
+            </p>
+            <button
+              type="button"
+              className="w-full rounded-lg bg-emerald-200 py-2 px-3 font-semibold text-emerald-950 transition hover:bg-emerald-100 disabled:opacity-50"
+              disabled={pending}
+              onClick={() => {
+                if (!edit || !duplicateTarget) return;
+                if (!confirm(`Gabungkan riwayat bermain ke ${duplicateTarget.name}? Pemain ini akan dilebur ke ${duplicateTarget.name}.`)) return;
+                start(async () => {
+                  try {
+                    const problem = await mergePlayers(edit.id, duplicateTarget.id);
+                    if (problem) { setError(problem); return; }
+                    dialog.current?.close();
+                    setEdit(null);
+                    setDuplicateTarget(null);
+                    setMessage(`Pemain berhasil digabungkan ke ${duplicateTarget.name}.`);
+                  } catch {
+                    setError("Gagal menggabungkan pemain.");
+                  }
+                });
+              }}
+            >
+              Gabungkan ke {duplicateTarget.name} (Merge)
+            </button>
+          </div>
+        )}
+        <div className="flex justify-end gap-2">
+          <button type="button" className={button} disabled={pending} onClick={() => {
+            dialog.current?.close();
+            setDuplicateTarget(null);
+          }}>Batal</button>
+          <button className={button} disabled={pending}>Simpan</button>
+        </div>
       </form>
     </dialog>
   </div>;

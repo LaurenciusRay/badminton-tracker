@@ -1,3 +1,5 @@
+import { cleanMemberDisplayName, INVISIBLE_CHARS_REGEX } from "./name";
+
 const months = [
   ["jan", "januari"], ["feb", "februari"], ["mar", "maret"], ["apr", "april"],
   ["mei"], ["jun", "juni"], ["jul", "juli"], ["agu", "ags", "agt", "agustus"],
@@ -19,7 +21,7 @@ export function parseChat(raw: string, today: string) {
   let date = "";
   let warning = "";
   for (const original of raw.split(/\r\n?|\n/)) {
-    const line = original.normalize("NFKC").replace(/[\u200b\u200e\u200f\ufeff\ufe0f]/g, "")
+    const line = original.normalize("NFKC").replace(INVISIBLE_CHARS_REGEX, "")
       .trim().replace(/^[*_~]+|[*_~]+$/g, "").trim();
     if (!line) continue;
     if (/^(?:potongan|diskon|note|catatan)\b/i.test(line)) break;
@@ -30,10 +32,10 @@ export function parseChat(raw: string, today: string) {
         warning = `Daftar berhenti sebelum nomor ${number}. Periksa pemain sebelum konfirmasi.`;
         break;
       }
-      const name = row[2]
-        .replace(/[#*0-9]\u20e3|[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}✓✔](?:[\ufe0e\ufe0f\u{e0020}-\u{e007f}]|\u200d(?=\p{Extended_Pictographic}))*/gu, " ")
-        .replace(/\s+/gu, " ").trim();
-      names.push(name.toLowerCase().replace(/\p{L}/u, letter => letter.toUpperCase()));
+      const rawName = row[2]
+        .replace(/[#*0-9]\u20e3|[\p{Extended_Pictographic}\p{Regional_Indicator}\p{Emoji_Modifier}✓✔](?:[\ufe0e\ufe0f\u{e0020}-\u{e007f}]|\u200d(?=\p{Extended_Pictographic}))*/gu, " ");
+      const name = cleanMemberDisplayName(rawName);
+      names.push(name.replace(/\p{L}/u, letter => letter.toUpperCase()));
     } else if (names.length) {
       break;
     } else if (!date && !/^(?:💵|💳|biaya|pembayaran|rekening)/iu.test(line)) {

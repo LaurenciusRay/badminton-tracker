@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireSession } from "../auth/session";
 import { db } from "../db";
 import { attendances, members, playSessions } from "../db/schema";
-import { normalizeMemberName } from "./name";
+import { cleanMemberDisplayName, normalizeMemberName } from "./name";
 import { jakartaToday, validDate } from "./parser";
 
 export async function loadAttendance() {
@@ -50,7 +50,7 @@ export async function saveAttendance(date: string, raw: string, names: string[],
         tx.delete(attendances).where(eq(attendances.sessionId, id)).run();
       }
       const targetId = id;
-      tx.insert(members).values(names.map((name, i) => ({ name: name.trim(), normalizedName: keys[i] })))
+      tx.insert(members).values(names.map((name, i) => ({ name: cleanMemberDisplayName(name), normalizedName: keys[i] })))
         .onConflictDoNothing({ target: members.normalizedName }).run();
       const ids = new Map(tx.select().from(members).where(inArray(members.normalizedName, keys)).all()
         .map(m => [m.normalizedName, m.id]));
